@@ -1,0 +1,52 @@
+---
+- name: Install nginx
+  hosts: myhost
+  become: true
+
+  tasks:
+  - name: Add epel-release repo
+    yum:
+      name: epel-release
+      state: present
+
+  - name: Install nginx
+    yum:
+      name: nginx
+      state: present
+  
+  - name: Creates sites-available
+    file:
+      path: /etc/nginx/sites-available
+      state: directory
+  
+  - name: Creates sites-enabled
+    file:
+      path: /etc/nginx/sites-enabled
+      state: directory
+
+  - name: Nginx Configure | Install the init script
+    template:
+      src: nginx_conf.conf
+      dest: /etc/nginx/sites-available/default
+    become: yes
+    become_method: sudo
+
+  - name: Enable new site
+    file:
+      src: /etc/nginx/sites-available/default
+      dest: /etc/nginx/sites-enabled/default
+      state: link
+    become: yes
+    become_method: sudo
+
+  - name: Add include in nginx.conf
+    ansible.builtin.lineinfile:
+      dest: /etc/nginx/nginx.conf 
+      regexp: "^    include /etc/nginx/sites-enabled/*;" 
+      insertafter: "    types_hash_max_size 4096;" 
+      line: "    include /etc/nginx/sites-enabled/*;"
+
+  - name: Start NGiNX
+    service:
+      name: nginx
+      state: started
